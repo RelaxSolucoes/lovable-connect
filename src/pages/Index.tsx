@@ -216,6 +216,7 @@ const Index = () => {
               qrCode={qrCode}
               countdown={countdown}
               isRenewing={isRenewing}
+              apiToken={apiToken}
             />
           )}
 
