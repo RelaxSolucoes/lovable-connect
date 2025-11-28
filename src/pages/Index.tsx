@@ -19,6 +19,7 @@ const API_BASE = "https://webhook.relaxsolucoes.online/webhook";
 const Index = () => {
   const [state, setState] = useState<AppState>("form");
   const [apiToken, setApiToken] = useState<string>("");
+  const [instanceName, setInstanceName] = useState<string>("");
   const [qrCode, setQrCode] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [countdown, setCountdown] = useState<number>(30);
@@ -26,6 +27,18 @@ const Index = () => {
 
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    const savedToken = localStorage.getItem("whatsapp_api_token");
+    const savedName = localStorage.getItem("whatsapp_instance_name");
+
+    if (savedToken) {
+      setApiToken(savedToken);
+      if (savedName) setInstanceName(savedName);
+      setState("success");
+    }
+  }, []);
 
   const clearAllTimers = useCallback(() => {
     if (pollingRef.current) {
@@ -63,9 +76,15 @@ const Index = () => {
 
       if (instanceData) {
         console.log("Connected:", instanceData.Connected, "LoggedIn:", instanceData.LoggedIn, "Name:", instanceData.Name);
-        
+
         if (instanceData.LoggedIn === true) {
           clearAllTimers();
+          // Save to localStorage
+          localStorage.setItem("whatsapp_api_token", token);
+          const currentInstanceName = instanceName || localStorage.getItem("whatsapp_instance_name") || "";
+          if (currentInstanceName) {
+            localStorage.setItem("whatsapp_instance_name", currentInstanceName);
+          }
           setState("success");
           return true;
         }
@@ -138,6 +157,12 @@ const Index = () => {
     }
   }, [state, apiToken, checkStatus, fetchQRCode, clearAllTimers]);
 
+  const handleReconnect = useCallback(async () => {
+    if (!apiToken) return;
+    setState("connecting");
+    await fetchQRCode(apiToken);
+  }, [apiToken, fetchQRCode]);
+
   const handleCreateInstance = async (name: string, token: string) => {
     setState("creating");
     setErrorMessage("");
@@ -154,12 +179,13 @@ const Index = () => {
 
       if (data.message === "success" && data.data?.token) {
         setApiToken(data.data.token);
+        setInstanceName(name);
         setState("created");
 
         // After 2 seconds, move to connecting
         setTimeout(async () => {
           setState("connecting");
-          
+
           // Wait a bit then fetch QR code
           setTimeout(async () => {
             await fetchQRCode(data.data.token);
@@ -172,7 +198,7 @@ const Index = () => {
       console.error("Error creating instance:", error);
       setErrorMessage(error instanceof Error ? error.message : "Erro ao criar instância");
       setState("error");
-      
+
       // Return to form after 5 seconds
       setTimeout(() => {
         setState("form");
@@ -220,7 +246,13 @@ const Index = () => {
             />
           )}
 
-          {state === "success" && <SuccessScreen />}
+          {state === "success" && (
+            <SuccessScreen
+              apiToken={apiToken}
+              instanceName={instanceName}
+              onReconnect={handleReconnect}
+            />
+          )}
 
           {state === "error" && (
             <div className="py-12 text-center animate-scale-in">
