@@ -31,9 +31,8 @@ const SuccessScreen = ({ apiToken, instanceName, onReconnect }: SuccessScreenPro
         </h2>
 
         <p className="text-muted-foreground max-w-sm mx-auto mb-6">
-          Sua instância WhatsApp está pronta para uso.
-          Você já pode começar a enviar e receber mensagens.
-        </p>
+          Aproveite seu período de degustação.
+                  </p>
       </div>
 
       {/* Tabs Navigation */}
